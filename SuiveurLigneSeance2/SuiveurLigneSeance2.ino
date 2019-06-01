@@ -6,6 +6,7 @@ int delta_t; // loop duration (ms) - temps entre 2 mesures
 float G0, G1, G2, G3, G4, G5, G6, G7; //gains
 float O0, O1, O2, O3, O4, O5, O6, O7; //offsets
 float i0, i1, i2, i3, i4, i5, i6, i7; //inputs
+float seuil_ligne; // seuil de perte de ligne
 
 // control coeeficients
 float as0, as, ds; //vitesse max moyenne, avergage speed, delta speed
@@ -27,6 +28,7 @@ void setup() {
   g_ML = 1;
   g_MR = 1;
   n_fg = 20;
+  seuil_ligne = 0.4;
   
   pinMode(13, OUTPUT);
   servoR.attach(31);
@@ -59,6 +61,11 @@ void loop() {
   // 
   ds = (as0 * (kp * dp) );
   //Serial.println(ds);
+
+
+  if(perteLigne() == 1) {
+    Serial.println("Ligne perdue!");
+  }
 
 /*
   // ralenti si ligne proche du bord
@@ -268,4 +275,14 @@ void displayInputsBC() {
   Serial.print(O6);
   Serial.print("     ");
   Serial.println(O7);
+}
+
+int perteLigne()
+{
+  if((i0+i1+i2+i3+i4+i5+i6+i7)>seuil_ligne) {
+    return 0;
+  }
+  else {
+    return 1;
+  }
 }
