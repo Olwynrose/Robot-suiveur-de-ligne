@@ -201,7 +201,7 @@ void cac(int ar0, int ar1, int ar2, int ar3, int ar4, int ar5, int ar6, int ar7)
 
 float detectLine() {
   float avrg;
-  avrg = (( 0*i0 + 1*i1 + 2*i2 + 3*i3 + 4*i4 + 5*i5 + 6*i6 + 7*i7 ) / (i0+i1+i2+i3+i4+i5+i6+i7)) - 3.5;
+  avrg = (( 0*i0 + 1*i1 + 2*i2 + 3*i3 + 4*i4 + 5*i5 + 6*i6 + 7*i7 ) / (i0+i1+i2+i3+i4+i5+i6+i7+0.00001)) - 3.5;
   Serial.print("Line position : ");
   Serial.println(avrg);
   return avrg;
