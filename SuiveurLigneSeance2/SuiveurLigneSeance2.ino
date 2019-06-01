@@ -7,6 +7,7 @@ float G0, G1, G2, G3, G4, G5, G6, G7; //gains
 float O0, O1, O2, O3, O4, O5, O6, O7; //offsets
 float i0, i1, i2, i3, i4, i5, i6, i7; //inputs
 float seuil_ligne; // seuil de perte de ligne
+int side;
 
 // control coeeficients
 float as0, as, ds; //vitesse max moyenne, avergage speed, delta speed
@@ -21,10 +22,9 @@ int s0R = 90; int s0L = 90; //no rotation values
 
 void setup() {
   Serial.begin(9600);
-  
   as = 0;
   si = 0;
-  delta_t = 1000; 
+  delta_t = 20; 
   g_ML = 1;
   g_MR = 1;
   n_fg = 20;
@@ -64,7 +64,15 @@ void loop() {
 
 
   if(perteLigne() == 1) {
-    Serial.println("Ligne perdue!");
+    if(side == 1) {
+    Serial.println("Ligne perdue par la droite");
+    }
+    else {
+    Serial.println("Ligne perdue par la gauche");
+    }
+  }
+  else {
+    cSide();
   }
 
 /*
@@ -284,5 +292,14 @@ int perteLigne()
   }
   else {
     return 1;
+  }
+}
+
+void cSide() {
+  if (ds>0 && ds<2) {
+    side = -1;
+  }
+  if (ds<0 && ds>-2) {
+    side = 1;
   }
 }
