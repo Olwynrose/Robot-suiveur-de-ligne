@@ -26,6 +26,10 @@ int max_t_learn; // time (ms) to compute the error
 int t_learn; // current time (ms) in the current learning loop
 int ind_learn; // index of the optimized parameter
 float delta_kp, delta_ki, delta_kd;
+int evoli, integrali, derivali; // deviation measure
+int n_evol; // number of loop to test the stopping criterion
+int i_evol; // current number of loop
+int th_stop; // stopping criterion threshold
 
 Servo servoR, servoL; //servos
 int s0R = 90; int s0L = 90; //no rotation values
@@ -68,6 +72,12 @@ void setup() {
   delta_kp = 0.05;
   delta_ki = 0.005;
   delta_kd = 0.01;
+  evoli = 0;
+  integrali = 0;
+  derivali = 0;
+  n_evol = 4;
+  i_evol = 0;
+  th_stop = 5;
     
   calibration();
 }
@@ -352,6 +362,7 @@ void learning() {
             ind_learn = 2;
             buf_param = ki;
             ki = ki + delta_ki;
+            evoli = evoli + 1;
           }
           else {
             kp = buf_param - delta_kp;
@@ -363,6 +374,7 @@ void learning() {
             ind_learn = 2;
             buf_param = ki;
             ki = ki + delta_ki;
+            evoli = evoli - 1;
           }
           else {
             ind_learn = 2;
@@ -381,6 +393,7 @@ void learning() {
             ind_learn = 3;
             buf_param = kd;
             kd = kd + delta_kd;
+            integrali = integrali + 1;
           }
           else {
             ki = buf_param - delta_ki;
@@ -392,6 +405,7 @@ void learning() {
             ind_learn = 3;
             buf_param = kd;
             kd = kd + delta_kd;
+            integrali = integrali - 1;
           }
           else {
             ind_learn = 3;
@@ -410,6 +424,8 @@ void learning() {
             ind_learn = 1;
             buf_param = kp;
             kp = kp + delta_kp;
+            i_evol = i_evol + 1;
+            derivali = derivali + 1;
           }
           else {
             kd = buf_param - delta_kd;
@@ -421,12 +437,15 @@ void learning() {
             ind_learn = 1;
             buf_param = kp;
             kp = kp + delta_kp;
+            i_evol = i_evol + 1;
+            derivali = derivali - 1;
           }
           else {
             ind_learn = 1;
             kd = buf_param;
             buf_param = kp;
             kp = kp + delta_kp;
+            i_evol = i_evol + 1;
           }
         }
       }
@@ -434,5 +453,15 @@ void learning() {
     }
 
     err = 0;
+    if(i_evol == n_evol) {
+      if((abs(evoli)+abs(integrali)+abs(derivali))<th_stop) {
+        
+      }
+      i_evol = 0;
+      evoli = 0;
+      integrali = 0;
+      derivali = 0;
+    } 
+    
   }
 }
