@@ -7,17 +7,25 @@ float G0, G1, G2, G3, G4, G5, G6, G7; //gains
 float O0, O1, O2, O3, O4, O5, O6, O7; //offsets
 float i0, i1, i2, i3, i4, i5, i6, i7; //inputs
 float seuil_ligne; // seuil de perte de ligne
-float dp_bf, dp_hf;
+float dp, dp_bf, dp_hf;
 int side;
 
 // control coeeficients
 float as0, as, ds; //vitesse max moyenne, avergage speed, delta speed
 float buf_dp; //dp à (t-1)
-float kp, ki, kd; //proportionnal coefficient, integral coefficient
+float kp, ki, kd; //proportionnal coefficient, integral coefficient (BF), derivative coefficient (HF)
 float si, sat_i;  // sum for the integral correction
 float g_ML, g_MR; //gain diff moteur
 
 float n_fg_hf, n_fg_bf; //nombre de mesures de la fenêtre glissante
+
+// learning
+float err, min_err; // position error, best position error
+float buf_param; // parameter buffer
+int max_t_learn; // time (ms) to compute the error
+int t_learn; // current time (ms) in the current learning loop
+int ind_learn; // index of the optimized parameter
+float delta_kp, delta_ki, delta_kd;
 
 Servo servoR, servoL; //servos
 int s0R = 90; int s0L = 90; //no rotation values
@@ -48,15 +56,23 @@ void setup() {
   kp = 0.2; // coefficient proportionnel
   ki = 0.01; // coefficient intégrale
   kd = 0.1; // coefficient dérivé
-
   dp_hf = 0;
   dp_bf = 0;
+
+  // learning setup
+  min_err = 100000000000;
+  err = 0;
+  t_learn = 0;
+  max_t_learn = 20000;
+  ind_learn = 1;
+  delta_kp = 0.05;
+  delta_ki = 0.005;
+  delta_kd = 0.01;
     
   calibration();
 }
 
 void loop() {  
-  float dp; //delta position
   int t_0, t_1;
 
   t_0 = millis();
@@ -96,8 +112,8 @@ void loop() {
 
   */
   /*
-  servoR.write(s0R - (int)(g_MR*(as + ds)));
-  servoL.write(s0L + (int)(g_ML*(as - ds)));
+  servoR.write(s0R - (int)(round(g_MR*(as + ds))));
+  servoL.write(s0L + (int)(round(g_ML*(as - ds))));
   */
 
   buf_dp = dp;
@@ -318,5 +334,105 @@ void cSide() {
   }
   if (ds<0 && ds>-2) {
     side = 1;
+  }
+}
+
+void learning() {
+  if (t_learn<max_t_learn) {
+    err = err + dp*dp;
+    t_learn = t_learn + delta_t;
+  }
+  else {
+    switch(ind_learn) {
+      case 1:
+      {
+        if(kp>buf_param) {
+          if(err < min_err) {
+            min_err = err;
+            ind_learn = 2;
+            buf_param = ki;
+            ki = ki + delta_ki;
+          }
+          else {
+            kp = buf_param - delta_kp;
+          }
+        }
+        else {
+          if(err < min_err) {
+            min_err = err;
+            ind_learn = 2;
+            buf_param = ki;
+            ki = ki + delta_ki;
+          }
+          else {
+            ind_learn = 2;
+            kp = buf_param;
+            buf_param = ki;
+            ki = ki + delta_ki;
+          }
+        }
+      }
+      break;
+      case 2:
+      {
+        if(ki>buf_param) {
+          if(err < min_err) {
+            min_err = err;
+            ind_learn = 3;
+            buf_param = kd;
+            kd = kd + delta_kd;
+          }
+          else {
+            ki = buf_param - delta_ki;
+          }
+        }
+        else {
+          if(err < min_err) {
+            min_err = err;
+            ind_learn = 3;
+            buf_param = kd;
+            kd = kd + delta_kd;
+          }
+          else {
+            ind_learn = 3;
+            ki = buf_param;
+            buf_param = kd;
+            kd = kd + delta_kd;
+          }
+        }
+      }
+      break;
+      case 3:
+      {
+        if(kd>buf_param) {
+          if(err < min_err) {
+            min_err = err;
+            ind_learn = 1;
+            buf_param = kp;
+            kp = kp + delta_kp;
+          }
+          else {
+            kd = buf_param - delta_kd;
+          }
+        }
+        else {
+          if(err < min_err) {
+            min_err = err;
+            ind_learn = 1;
+            buf_param = kp;
+            kp = kp + delta_kp;
+          }
+          else {
+            ind_learn = 1;
+            kd = buf_param;
+            buf_param = kp;
+            kp = kp + delta_kp;
+          }
+        }
+      }
+      break;
+    }
+
+    err = 0;
   }
 }
