@@ -7,27 +7,34 @@ float G0, G1, G2, G3, G4, G5, G6, G7; //gains
 float O0, O1, O2, O3, O4, O5, O6, O7; //offsets
 float i0, i1, i2, i3, i4, i5, i6, i7; //inputs
 float seuil_ligne; // seuil de perte de ligne
+float dp_bf, dp_hf;
 int side;
 
 // control coeeficients
 float as0, as, ds; //vitesse max moyenne, avergage speed, delta speed
+float buf_dp; //dp à (t-1)
 float kp, ki, kd; //proportionnal coefficient, integral coefficient
 float si, sat_i;  // sum for the integral correction
 float g_ML, g_MR; //gain diff moteur
 
-float n_fg; //nombre de mesures de la fenêtre glissante
+float n_fg_hf, n_fg_bf; //nombre de mesures de la fenêtre glissante
 
 Servo servoR, servoL; //servos
 int s0R = 90; int s0L = 90; //no rotation values
+
+
+
 
 void setup() {
   Serial.begin(9600);
   as = 0;
   si = 0;
   delta_t = 20; 
+  buf_dp = 0;
   g_ML = 1;
   g_MR = 1;
-  n_fg = 20;
+  n_fg_hf = 5;
+  n_fg_bf = 50;
   seuil_ligne = 0.4;
   
   pinMode(13, OUTPUT);
@@ -39,15 +46,17 @@ void setup() {
   // control setup 
   as0 = 5; // vitesse moyenne max
   kp = 0.2; // coefficient proportionnel
-  ki = 0; // coefficient intégrale
-  kd = 0; // coefficient dérivé
+  ki = 0.01; // coefficient intégrale
+  kd = 0.1; // coefficient dérivé
+
+  dp_hf = 0;
+  dp_bf = 0;
     
   calibration();
 }
 
 void loop() {  
   float dp; //delta position
-  float buf_dp;
   int t_0, t_1;
 
   t_0 = millis();
@@ -58,9 +67,14 @@ void loop() {
   // décalement de la ligne
   dp = detectLine();
 
+  dp_hf = dp_hf + (dp - buf_dp - dp_hf) / n_fg_hf;
+
+  dp_bf = dp_bf + (dp - dp_bf) / n_fg_bf;
+
   // 
-  ds = (as0 * (kp * dp) );
-  //Serial.println(ds);
+  ds = (as0 * (kp * dp + kd * dp_hf + n_fg_bf * ki * dp_bf) );
+  Serial.print("ds : ");
+  Serial.println(ds);
 
 
   if(perteLigne() == 1) {
@@ -85,6 +99,9 @@ void loop() {
   servoR.write(s0R - (int)(g_MR*(as + ds)));
   servoL.write(s0L + (int)(g_ML*(as - ds)));
   */
+
+  buf_dp = dp;
+  
   // control the timing
   // faire en sorte qu'une boucle prenne exactement delta_t
   t_1 = millis(); 
