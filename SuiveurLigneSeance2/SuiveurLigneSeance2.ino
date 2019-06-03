@@ -67,7 +67,7 @@ void setup() {
   min_err = 100000000000;
   err = 0;
   t_learn = 0;
-  max_t_learn = 20000;
+  max_t_learn = 2000;
   ind_learn = 1;
   delta_kp = 0.05;
   delta_ki = 0.005;
@@ -99,32 +99,38 @@ void loop() {
 
   // 
   ds = (as0 * (kp * dp + kd * dp_hf + n_fg_bf * ki * dp_bf) );
-  Serial.print("ds : ");
-  Serial.println(ds);
 
 
   if(perteLigne() == 1) {
     if(side == 1) {
-    Serial.println("Ligne perdue par la droite");
+     Serial.println("Ligne perdue par la droite");
+     /*
+     ds = 1*as;
+     */
     }
     else {
     Serial.println("Ligne perdue par la gauche");
+     /*
+     ds = 1*as;
+     */
     }
   }
   else {
     cSide();
+    /*
+    // ralenti si ligne proche du bord
+    float coefralentissement = 0;
+    as = max(0, as0*(1 - abs(coefralentissement*dp)));
+    */
   }
 
-/*
-  // ralenti si ligne proche du bord
-  float coefralentissement = 0;
-  as = max(0, as0*(1 - abs(coefralentissement*dp)));
+    servoR.write(s0R - (int)(round(g_MR*(as + ds))));
+    servoL.write(s0L + (int)(round(g_ML*(as - ds))));
 
-  */
-  /*
-  servoR.write(s0R - (int)(round(g_MR*(as + ds))));
-  servoL.write(s0L + (int)(round(g_ML*(as - ds))));
-  */
+
+
+  learning();
+
 
   buf_dp = dp;
   
@@ -233,7 +239,6 @@ void calibration() {
 
 
 
-
 void cac(int ar0, int ar1, int ar2, int ar3, int ar4, int ar5, int ar6, int ar7) {
   //Correction After Calibration
   //Input : 
@@ -254,19 +259,13 @@ void cac(int ar0, int ar1, int ar2, int ar3, int ar4, int ar5, int ar6, int ar7)
 
 
 
-
-
-
 float detectLine() {
   float avrg;
   avrg = (( 0*i0 + 1*i1 + 2*i2 + 3*i3 + 4*i4 + 5*i5 + 6*i6 + 7*i7 ) / (i0+i1+i2+i3+i4+i5+i6+i7+0.00001)) - 3.5;
-  Serial.print("Line position : ");
-  Serial.println(avrg);
+  //Serial.print("Line position : ");
+  //Serial.println(avrg);
   return avrg;
 }
-
-
-
 
 
 
@@ -452,10 +451,14 @@ void learning() {
       break;
     }
 
+
+    
     err = 0;
+    t_learn = 0;
     if(i_evol == n_evol) {
       if((abs(evoli)+abs(integrali)+abs(derivali))<th_stop) {
-        
+        as0 = as0 + 1 ;
+        min_err = 100000000000;
       }
       i_evol = 0;
       evoli = 0;
@@ -463,5 +466,5 @@ void learning() {
       derivali = 0;
     } 
     
-  }
+  }//fin else calcul erreur
 }
