@@ -56,7 +56,7 @@ void setup() {
   servoL.write(s0L);
 
   // control setup 
-  as0 = 5; // vitesse moyenne max
+  as0 = 3; // vitesse moyenne max
   kp = 0.2; // coefficient proportionnel
   ki = 0.01; // coefficient intégrale
   kd = 0.1; // coefficient dérivé
@@ -67,7 +67,7 @@ void setup() {
   min_err = 100000000000;
   err = 0;
   t_learn = 0;
-  max_t_learn = 2000;
+  max_t_learn = 20000;
   ind_learn = 1;
   delta_kp = 0.05;
   delta_ki = 0.005;
@@ -104,24 +104,18 @@ void loop() {
   if(perteLigne() == 1) {
     if(side == 1) {
      Serial.println("Ligne perdue par la droite");
-     /*
-     ds = 1*as;
-     */
+     ds = -1*as;
     }
     else {
     Serial.println("Ligne perdue par la gauche");
-     /*
      ds = 1*as;
-     */
     }
   }
   else {
     cSide();
-    /*
     // ralenti si ligne proche du bord
     float coefralentissement = 0;
     as = max(0, as0*(1 - abs(coefralentissement*dp)));
-    */
   }
 
     servoR.write(s0R - (int)(round(g_MR*(as + ds))));
@@ -364,7 +358,7 @@ void learning() {
             evoli = evoli + 1;
           }
           else {
-            kp = buf_param - delta_kp;
+            kp = max(0, buf_param - delta_kp);
           }
         }
         else {
@@ -395,7 +389,7 @@ void learning() {
             integrali = integrali + 1;
           }
           else {
-            ki = buf_param - delta_ki;
+            ki = max(0, buf_param - delta_ki);
           }
         }
         else {
@@ -427,7 +421,7 @@ void learning() {
             derivali = derivali + 1;
           }
           else {
-            kd = buf_param - delta_kd;
+            kd = max(0, buf_param - delta_kd);
           }
         }
         else {
